@@ -20,8 +20,7 @@ def parse_args():
 
     parser.add_argument('--trim',
                         help='remove system fields like _version_ pulled from Solr',
-                        type=bool,
-                        default=True)
+                        type=lambda x: (str(x).lower() in ['true','1', 'yes']))
 
     parser.add_argument('--fields',
                         help='comma delim fields to index, if blank all fields indexed',
@@ -39,12 +38,12 @@ if __name__ == "__main__":
     fields = args['fields'].split(',') if args['fields'] else None
     commitEvery = args['batch_size']
 
-    idx = 0
+    numDocs = 0
     for docLine in docs:
-        idx += 1
+        numDocs += 1
         srcDoc = json.loads(docLine)
-        if args['trim']:
-            del srcDoc['_version_']
+        if args['trim'] == True:
+            srcDoc.pop('_version_',None)
 
         doc = {}
         if fields:
@@ -53,7 +52,10 @@ if __name__ == "__main__":
                     doc[field] = srcDoc[field]
         else:
             doc = srcDoc
-        commit = True if (idx % 500) == 0 else False
+        commit = True if (numDocs % 500) == 0 else False
         solr_conn.add([doc],
                       commit=commit)
+        if (numDocs % 1000 == 0):
+            print("Uploaded %s docs" % numDocs)
+
     solr_conn.add([], commit=True)
