@@ -38,6 +38,8 @@ if __name__ == "__main__":
     fields = args['fields'].split(',') if args['fields'] else None
     commitEvery = args['batch_size']
 
+    batch = []
+
     numDocs = 0
     for docLine in docs:
         numDocs += 1
@@ -52,10 +54,12 @@ if __name__ == "__main__":
                     doc[field] = srcDoc[field]
         else:
             doc = srcDoc
-        commit = True if (numDocs % 500) == 0 else False
-        solr_conn.add([doc],
-                      commit=commit)
-        if (numDocs % 1000 == 0):
+        batch.append(doc)
+        if (numDocs % commitEvery == 0):
+            solr_conn.add(batch,
+                          commit=True)
             print("Uploaded %s docs" % numDocs)
-
-    solr_conn.add([], commit=True)
+            batch.clear()
+#send last batch to solr
+    solr_conn.add(batch,
+                  commit=True)
